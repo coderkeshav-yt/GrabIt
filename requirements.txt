@@ -1,3 +1,4 @@
-yt-dlp>=2025.9.26
+yt-dlp[default]>=2026.10.26
 customtkinter==5.2.2
-pyinstaller>=6.16.0
+Pillow>=11.3
+packaging>=24

@@ -1,0 +1,62 @@
+name: Desktop checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        python-version: ['3.11', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - run: python -B -m unittest discover -s tests -v
+
+  build:
+    runs-on: ${{ matrix.os }}
+    needs: tests
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            name: windows-x64
+            artifact: dist/GrabIt.exe
+          - os: macos-latest
+            name: macos
+            artifact: dist/GrabIt-macOS.tar.gz
+          - os: ubuntu-latest
+            name: linux-x64
+            artifact: dist/GrabIt-Linux.tar.gz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-build.txt
+      - run: python -m pip install -r requirements-build.txt
+      - run: python -m PyInstaller --noconfirm GrabIt.spec
+      - if: runner.os == 'macOS'
+        run: tar -czf dist/GrabIt-macOS.tar.gz -C dist GrabIt.app
+      - if: runner.os == 'Linux'
+        run: tar -czf dist/GrabIt-Linux.tar.gz -C dist GrabIt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GrabIt-${{ matrix.name }}-external-FFmpeg
+          path: ${{ matrix.artifact }}
+          if-no-files-found: error

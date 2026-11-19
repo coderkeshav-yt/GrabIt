@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -36,3 +37,23 @@ def get_downloads_folder() -> str:
     fallback = Path.home() / "Downloads"
     fallback.mkdir(parents=True, exist_ok=True)
     return str(fallback)
+
+
+def get_profile_path() -> Path:
+    if sys.platform == "win32":
+        base = Path(os.environ.get("LOCALAPPDATA") or Path.home())
+    elif sys.platform == "darwin":
+        base = Path.home() / "Library" / "Application Support"
+    else:
+        base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+    return base / "GrabIt" / "profile.json"
+
+
+def open_local_path(path: Path) -> None:
+    if not path.exists():
+        raise FileNotFoundError(path)
+    if sys.platform == "win32":
+        os.startfile(path)
+    else:
+        launcher = "open" if sys.platform == "darwin" else "xdg-open"
+        subprocess.Popen([launcher, str(path.resolve())], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
